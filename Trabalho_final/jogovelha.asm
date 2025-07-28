@@ -1,6 +1,8 @@
 #Jogo da velha
 # Autores: Lucas C Caczmareki e Victor Mariano
 
+#Comentário de teste dos guri pra ver se ta tudo bem
+
 #TABELA PRA MODIFICAR A STRING
 	#espaço mem - numero
 	#1 			= 1
