@@ -1,3 +1,9 @@
+# TA FALTANDO ISSO
+#Implementar a flag que define quem ta jogando (O ou X)
+#Implementar as condições de vitória e checar se alguém ganha
+#Implementar o VS máquina que joga sempre num lugar aleatório
+#----------------------------------------------------------
+
 #Jogo da velha
 # Autores: Lucas C Caczmareki e Victor Mariano
 
@@ -5,19 +11,19 @@
 
 #TABELA PRA MODIFICAR A STRING
 	#espaço mem - numero
-	#1 			= 1
-	#5			= 2
-	#9 			= 3
-	#25 		= 4
-	#29 		= 5
-	#33 		= 6
-	#49 		= 7
-	#53 		= 8
-	#57 		= 9	
+	#3 			= 1
+	#7			= 2
+	#11 		= 3
+	#27 		= 4
+	#31 		= 5
+	#35 		= 6
+	#51 		= 7
+	#55 		= 8
+	#59 		= 9	
 
 .data
-	tabuleiro: .asciiz " 1 | 2 | 3\n------------\n 4 | 5 | 6\n------------\n 7 | 8 | 9\n\n\n"
-	str1: .asciiz "--------------- Jogo da velha ---------------\n1. Nova partida\n2. Placar atual\n3. Encerrar jogo\n"
+	tabuleiro: .asciiz "\n\n 1 | 2 | 3\n------------\n 4 | 5 | 6\n------------\n 7 | 8 | 9\n\n\n"
+	str1: .asciiz "\n--------------- Jogo da velha ---------------\n1. Nova partida\n2. Placar atual\n3. Encerrar jogo\n"
 	str2: .asciiz "Digite a sua opção: "
 	str3: .asciiz "Vitórias X: "
 	str4: .asciiz "Vitórias O: "
@@ -33,14 +39,17 @@
 #o main vai funcionar como o menu
 main:
 loop:
+	#imprime string
 	la $a0, str1
 	li $v0, 4
 	syscall
 	
+	#imprime string
 	la $a0, str2
 	li $v0, 4
 	syscall
 	
+	#Lê a opção digitada pelo usuário
 	li $v0, 5
 	syscall
 	#t0 nessa parte vai conter a opção do menu
@@ -66,8 +75,9 @@ loop:
 		#s7 guarda os empates
 		#----------------------------					
 		
-		beqz $v0, bola_vence	#se o bola venceu, atualiza o placar e loopa
-		beq $v0, 1, xis_vence	#se o xis venceu, atualiza e loopa
+		beqz $v0, bola_vence	#se o bola venceu, atualiza o placar e loopa (vence com 0)
+		beq $v0, 1, xis_vence	#se o xis venceu, atualiza e loopa			 (vence com 1)
+		j velha_vence
 		
 		#se nenhum deles venceu, então empatou
 		addi $s7, $s7, 1	#s7++, atualiza placar
@@ -80,6 +90,10 @@ loop:
 		bola_vence:
 			addi $t9, $t9, 1	#t9++
 			j loop #continua loopando até que o usuario escolha encerrar
+			
+		velha_vence:
+			addi $s7, $s7, 1	#s7++
+			j loop #loopa até o usuário dizer chega
 	
 	imprime_placar:
 		
@@ -148,51 +162,63 @@ loop:
 		j loop	#volta e loopa
 
 partida:
-	addi $s5, $zero, 0 # inicia o contador
-	addi, $s6, $zero, 9
+	#Guardamos o RA na pilha pois depois haverá outra subrotina
+	addiu $sp, $sp, -4	#faz o stack pointer apontar pro topo
+	sw $ra, ($sp)		#salva o RA na pilha
+	
+	addi $s5, $zero, 0 	# inicia o contador
+	addi, $s6, $zero, 9	# final do contador
 
 	jogada:
 		#aqui entra as condições
-		beq $s5, $s6, empate
+		beq $s5, $s6, empate		#quando terminar pula pra empate que finaliza a partida
 		jal imprime_tab
 		
 		#tem que botar uma flag pra indicar se a jogada é o X ou ou o O
 		
- 		la $a0, intro_text # texto pro usuario
+		# texto pro usuario
+ 		la $a0, intro_text 		
  		li $v0, 4
  		syscall
-    
-		li $v0, 12  # ler a entrada do usuario e salva em s0
+    	
+    	# ler a entrada do usuario e salva em s0
+		li $v0, 12  			
 		syscall 
 		move $s0, $v0
-    
-		blt $s0, 48, invalido # teste se for 0-9
-		bgt $s0, 57, invalido
-	
-		la $s1, tabuleiro # carrega a string em s1
-		li $s2, 0 # flag para ver se encontrou ou não
-	
-		loop_string: #percorre a string até achar (ou não) o número
-		
-			lb $s3, 0($s1) #carrega o caractere atual da string em s3
+    	
+    	# teste se for 0-9
+		blt $s0, 48, invalido 	#s0 < 0
+		bgt $s0, 57, invalido	#s0 > 9
+
+		#s1 = endereço da string
+		#s3 = caracter lido da string
+		#s0 = caracter digitado pelo usuário
 			
-			beqz $s3, invalido #se for o ultimo caracter sai do loop
+		la $s1, tabuleiro 		# carrega a string em s1
+		li $s2, 0 				# flag para ver se encontrou ou não
 	
-			bne $s3, $s1, next # vai pro proximo elemento se não fro o numero do usuario
-	
+		loop_string: 			#percorre a string até achar (ou não) o número
+			
+			lb $s3, 0($s1) 		#carrega o caractere atual da string em s3
+			
+			beqz $s3, invalido 	#se for o ultimo caracter sai do loop
+			
+			bne $s3, $s0, next 	# vai pro proximo elemento se não for o numero do usuario
+			
 			#se chegou aqui, encontrou o número
-			addi $s5, $s5, 1
+			addi $s5, $s5, 1	#contador(i)++
 			
 			#dependendo do número encontrado retorna um resultado
-			beq $s1, 49, final1
-			beq $s1, 50, final2
-			beq $s1, 51, final3
-			beq $s1, 52, final4
-			beq $s1, 53, final5
-			beq $s1, 54, final6
-			beq $s1, 55, final7
-			beq $s1, 56, final8
-			beq $s1, 57, final9
+			#Esses números são os decimais (1-9) na tabela ascii
+			beq $s0, 49, final1		
+			beq $s0, 50, final2
+			beq $s0, 51, final3
+			beq $s0, 52, final4
+			beq $s0, 53, final5
+			beq $s0, 54, final6
+			beq $s0, 55, final7
+			beq $s0, 56, final8
+			beq $s0, 57, final9
 	
 			next: #vai pro próxima iterações
 				addi $s1, $s1, 1
@@ -203,56 +229,64 @@ partida:
 				la $a0, invalido_text
 				syscall
 				j jogada
-
+		
+			#retorna a posição do número respectivo na string
 			final1:
-				addi $v0, $zero, 1
+				addi $v0, $zero, 3
 				j modifica_tabuleiro
 	
 			final2:
-				addi $v0, $zero, 5
+				addi $v0, $zero, 7
 				j modifica_tabuleiro
 	
 			final3:
-				addi $v0, $zero, 9
+				addi $v0, $zero, 11
 				j modifica_tabuleiro
 	
 			final4:
-				addi $v0, $zero, 25
+				addi $v0, $zero, 27
 				j modifica_tabuleiro
 	
 			final5:
-				addi $v0, $zero, 29
+				addi $v0, $zero, 31
 				j modifica_tabuleiro
 	
 			final6:
-				addi $v0, $zero, 33
+				addi $v0, $zero, 35
 				j modifica_tabuleiro
 	
 			final7:
-				addi $v0, $zero, 49
+				addi $v0, $zero, 51
 				j modifica_tabuleiro
 
 			final8:
-				addi $v0, $zero, 53
+				addi $v0, $zero, 55
 				j modifica_tabuleiro
 	 
 			final9:
-				addi $v0, $zero, 57
+				addi $v0, $zero, 59
 				j modifica_tabuleiro
 	
 
 	modifica_tabuleiro:
 	
-		#a0 -> flag se ta jogando o x(1) ou o(0)
-		li $a0, 1		#escreve x nesse caso (dps vai ter que fazer isso com base num registrador que vai ficar trocando
+		#a0 -> flag se ta jogando o x(1) ou o(0) PRECISA IMPLEMENTAR!!!
+		li $a0, 1			#escreve x nesse caso (dps vai ter que fazer isso com base num registrador que vai ficar trocando
 		move $a1, $v0		#esse número vai vir atravéz do v0, valor de retorno da função que o victor ta fazendo
 		jal escreve
 		j jogada
 	
+	#aqui ainda vai ser necessário implementar as condições de vitória!
 	empate:
-		jr $ra
-		#aqui retorna o valor do resultado
-
+		#aqui por enquanto é o único retorno da subrotina "partida" vou precisa desempilhar o ra
+		lw $ra, ($sp)		#faz um pop do valor
+		addiu $sp, $sp, 4	#faz o top voltar uma posição
+		
+		#se chegou em empate v0 igual a 2
+		li $v0, 2
+		
+		jr $ra				#aqui retorna o valor do resultado
+		
 escreve:
 	#t0 endereço string
 	la $t0, tabuleiro
@@ -275,16 +309,17 @@ escreve:
 		jr $ra	
 	
 imprime_tab:
+	#aqui não precisa salvar o RA por que ele não chama função nenhuma
 	#imprime tabuleiro
 	la $a0, tabuleiro
 	li $v0, 4
 	syscall
 	jr $ra
 
-condicao_vitoria:
-	horizontal_1:
-		1, 5, 9 tem o mesmo símbolo.
-		flag
+#condicao_vitoria:
+#	horizontal_1:
+#		1, 5, 9 tem o mesmo símbolo.
+#		flag
 		
 		#retorna 1 se x ganhou
 		#0 se O ganhou
