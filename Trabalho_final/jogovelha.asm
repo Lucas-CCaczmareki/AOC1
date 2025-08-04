@@ -30,7 +30,7 @@
 	str5: .asciiz "Empates: "
 	new_line: .asciiz "\n"
 	line: .asciiz "----------------------\n"
-	invalido_text: .asciiz "O numero digitado é invalido tente novamente\n"
+	invalido_text: .asciiz "\nO numero digitado é invalido tente novamente\n"
     intro_text: .asciiz "Digite o numero do espaço desejado: "
 	
 .text
@@ -62,6 +62,7 @@ loop:
 	beq $t0, $t1, nova_partida
 	beq $t0, $t2, imprime_placar
 	beq $t0, $t3, end
+	j loop		#se o usuario quiser foder com a minha vida só volta pro inicio
 
 	nova_partida:
 		jal partida
