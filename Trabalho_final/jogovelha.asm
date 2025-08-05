@@ -171,6 +171,14 @@ partida:
 	addi, $s6, $zero, 9	# final do contador
 
 	jogada:
+		#vou usar o t0 e ficar de olho
+		li $t0, 2
+		#se for par(resto da div por 2 == 0), seta a flag pra 1 (joga x)
+		div $s5, $t0	#contador % 2
+		mfhi $a3		#resto 0, joga O, resto 1 joga X
+		
+		#se for impar, seta pra 0(joga O)
+		
 		#aqui entra as condições
 		beq $s5, $s6, empate		#quando terminar pula pra empate que finaliza a partida
 		jal imprime_tab
@@ -272,7 +280,7 @@ partida:
 	modifica_tabuleiro:
 	
 		#a0 -> flag se ta jogando o x(1) ou o(0) PRECISA IMPLEMENTAR!!!
-		li $a0, 1			#escreve x nesse caso (dps vai ter que fazer isso com base num registrador que vai ficar trocando
+		#li $a0, 1			#escreve x nesse caso (dps vai ter que fazer isso com base num registrador que vai ficar trocando
 		move $a1, $v0		#esse número vai vir atravéz do v0, valor de retorno da função que o victor ta fazendo
 		jal escreve
 		j jogada
@@ -293,7 +301,7 @@ escreve:
 	la $t0, tabuleiro
 	
 	#a0, qual símbolo escreve
-	beqz $a0, bolinha
+	beqz $a3, bolinha
 	
 	xis:
 		#t1 simbolo pra escrever
