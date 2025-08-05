@@ -1,6 +1,4 @@
 # TA FALTANDO ISSO
-#Implementar a flag que define quem ta jogando (O ou X)
-#Implementar as condições de vitória e checar se alguém ganha
 #Implementar o VS máquina que joga sempre num lugar aleatório
 #----------------------------------------------------------
 
@@ -32,6 +30,8 @@
 	line: .asciiz "----------------------\n"
 	invalido_text: .asciiz "\nO numero digitado é invalido tente novamente\n"
     intro_text: .asciiz "Digite o numero do espaço desejado: "
+    jogada_bola: .asciiz "----------- Jogada do bolinha -----------\n"
+    jogada_xis: .asciiz "----------- Jogada do xis -----------\n"
 	
 .text
 .globl main
@@ -39,6 +39,9 @@
 #o main vai funcionar como o menu
 main:
 loop:
+	#reseta a string
+	jal reseta_tabuleiro
+	
 	#imprime string
 	la $a0, str1
 	li $v0, 4
@@ -71,13 +74,13 @@ loop:
 		#1 se quem ganhou foi o X, 0 se for o Bolinha e qualquer coisa se empate
 
 		#----------------------------
-		#t8 guarda as vitórias do x
-		#t9 guarda as do O
+		#t6 guarda as vitórias do x
+		#t7 guarda as do O
 		#s7 guarda os empates
 		#----------------------------					
 		
-		beqz $v0, bola_vence	#se o bola venceu, atualiza o placar e loopa (vence com 0)
 		beq $v0, 1, xis_vence	#se o xis venceu, atualiza e loopa			 (vence com 1)
+		beqz $v0, bola_vence	#se o bola venceu, atualiza o placar e loopa (vence com 0)
 		j velha_vence
 		
 		#se nenhum deles venceu, então empatou
@@ -85,11 +88,11 @@ loop:
 		j loop				#loopa até acabar
 				
 		xis_vence:
-			addi $t8, $t8, 1	#t8++
+			addi $t6, $t6, 1	#t6++
 			j loop
 		
 		bola_vence:
-			addi $t9, $t9, 1	#t9++
+			addi $t7, $t7, 1	#t7++
 			j loop #continua loopando até que o usuario escolha encerrar
 			
 		velha_vence:
@@ -113,7 +116,7 @@ loop:
 		li $v0, 4
 		syscall
 		
-		move $a0, $t8 #traz o placar do x pro argumento
+		move $a0, $t6 #traz o placar do x pro argumento
 		li $v0, 1 #imprime int
 		syscall
 		
@@ -129,7 +132,7 @@ loop:
 		li $v0, 4
 		syscall
 		
-		move $a0, $t9 #traz o placar do x pro argumento
+		move $a0, $t7 #traz o placar do x pro argumento
 		li $v0, 1 #imprime int
 		syscall
 		
@@ -168,7 +171,8 @@ partida:
 	sw $ra, ($sp)		#salva o RA na pilha
 	
 	addi $s5, $zero, 0 	# inicia o contador
-	addi, $s6, $zero, 9	# final do contador
+	addi $s6, $zero, 9	# final do contador
+	jal imprime_tab		#imprime o tabuleiro inicial
 
 	jogada:
 		#vou usar o t0 e ficar de olho
@@ -180,11 +184,24 @@ partida:
 		#se for impar, seta pra 0(joga O)
 		
 		#aqui entra as condições
-		jal imprime_tab
+		#jal imprime_tab
 		beq $s5, $s6, empate		#quando terminar pula pra empate que finaliza a partida
 		
-		#tem que botar uma flag pra indicar se a jogada é o X ou ou o O
+		#aqui bota quem ta jogando na tela
+		beqz $a3, bola_joga
 		
+		xis_joga:
+			la $a0, jogada_xis
+			li $v0, 4
+			syscall
+			j imprimiu_jogador
+		
+		bola_joga:
+			la $a0, jogada_bola
+			li $v0, 4
+			syscall
+		
+		imprimiu_jogador:
 		# texto pro usuario
  		la $a0, intro_text 		
  		li $v0, 4
@@ -278,14 +295,34 @@ partida:
 	
 
 	modifica_tabuleiro:
-	
-		#a0 -> flag se ta jogando o x(1) ou o(0) PRECISA IMPLEMENTAR!!!
 		#li $a0, 1			#escreve x nesse caso (dps vai ter que fazer isso com base num registrador que vai ficar trocando
 		move $a1, $v0		#esse número vai vir atravéz do v0, valor de retorno da função que o victor ta fazendo
 		jal escreve
+		jal imprime_tab		#imprime o tabuleiro após modificar
+		#AQUI VAI CHAMAR A CONDIÇÃO DE VITÓRIA E COM BASE NO VALOR LOOPA OU CONTINUA
+		#0 se O ganhou
+		#1 se X ganhou
+		#3 se nao deu nada
+		jal condicao_vitoria
+		
+		beqz $v0, bolinha_ganhou 	#se v0 = 0
+		beq $v0, 1, xis_ganhou		#se v0 = 1
 		j jogada
+		
+		xis_ganhou:
+			lw $ra, ($sp)		#faz um pop do valor
+			addiu $sp, $sp, 4	#faz o top voltar uma posição			
+			
+			#se chegou aqui, v0 ta igual a 1, só volta
+			jr $ra
 	
-	#aqui ainda vai ser necessário implementar as condições de vitória!
+		bolinha_ganhou:
+			lw $ra, ($sp)		#faz um pop do vaslor
+			addiu $sp, $sp, 4	#faz o top voltar uma posição
+			
+			#se chegou aqui, v0 ta igual a 0, só volta
+			jr $ra			
+	
 	empate:
 		#aqui por enquanto é o único retorno da subrotina "partida" vou precisa desempilhar o ra
 		lw $ra, ($sp)		#faz um pop do valor
@@ -325,14 +362,194 @@ imprime_tab:
 	syscall
 	jr $ra
 
-#condicao_vitoria:
-#	horizontal_1:
-#		1, 5, 9 tem o mesmo símbolo.
-#		flag
+condicao_vitoria:	
+	#a3 é 0 se for bolinha // ou 1 se for X
+	#se tiver 3 símbolos iguais, carrega a3 no v0 e retorna
+
+	li $v0, 3	#qualquer coisa se não foi decidido ainda
+	
+	#t0 já contém o endereço do tabuleiro
+	la $t0, tabuleiro
+	
+	#s0, s1, s2 vão conter os 3 símbolos que podem formar uma condição de vitória
+	#t8, t9 vão ser flags pra comparar se eles são iguais
+	
+	#---------------
+	#horizontal_1:
+	#3, 7, 11 tem o mesmo símbolo.
+	#---------------
+	lb $s0, 3($t0)
+	lb $s1, 7($t0)
+	lb $s2, 11($t0)
+	
+	seq $t8, $s0, $s1	#3(t0) == 7(t0)
+	seq $t9, $s1, $s2	#7(t0) == 11(t0)
+	
+	#confere se as duas flags são 1
+    and $t8, $t8, $t9
+   	bnez $t8, retorna_vitoria
+    #se não, continua
+	
+	#--------------
+	#horizontal 2:
+	#27, 31, 35 tem o mesmo símbolo
+	#--------------
+	lb $s0, 27($t0)
+	lb $s1, 31($t0)
+	lb $s2, 35($t0)
+	
+	#testa se os 3 símbolos são iguais
+	seq $t8, $s0, $s1	
+	seq $t9, $s1, $s2	
+	
+	#confere se as duas flags são 1
+    and $t8, $t8, $t9
+   	bnez $t8, retorna_vitoria
+    #se não, continua
+
+	#--------------
+	#horizontal 3:
+	#51, 55, 59 mesmo símbolo
+	#--------------
+	lb $s0, 51($t0)
+	lb $s1, 55($t0)
+	lb $s2, 59($t0)
+	
+	seq $t8, $s0, $s1	
+	seq $t9, $s1, $s2	
+	
+	#confere se as duas flags são 1
+    and $t8, $t8, $t9
+   	bnez $t8, retorna_vitoria
+    #se não, continua
+
+	#--------------
+	#diagonal 1:
+	#3, 31, 59 tem o mesmo valor
+	#--------------				
+	lb $s0, 3($t0)
+	lb $s1, 31($t0)
+	lb $s2, 59($t0)
+	
+	#testa se os 3 símbolos são iguais
+	seq $t8, $s0, $s1	
+	seq $t9, $s1, $s2	
+	
+	#confere se as duas flags são 1
+    and $t8, $t8, $t9
+   	bnez $t8, retorna_vitoria
+    #se não, continua		
+	
+	#---------------------------
+	#--------------	
+	#vertical_1:
+    #3, 27, 51 tem o mesmo símbolo.
+    #--------------	
+    lb $s0, 3($t0)
+    lb $s1, 27($t0)
+    lb $s2, 51($t0)
+
+    seq $t8, $s0, $s1    #3(t0) == 27(t0)
+    seq $t9, $s1, $s2    #27(t0) == 51(t0)
+
+    #confere se as duas flags são 1
+    and $t8, $t8, $t9
+   	bnez $t8, retorna_vitoria
+    #se não, continua
+
+	#--------------	
+    #vertical_2:
+    #7, 31, 55 tem o mesmo símbolo.
+    #--------------	
+    lb $s0, 7($t0)
+    lb $s1, 31($t0)
+    lb $s2, 55($t0)
+
+    seq $t8, $s0, $s1    #7(t0) == 31(t0)
+    seq $t9, $s1, $s2    #31(t0) == 55(t0)
+
+    #confere se as duas flags são 1
+    and $t8, $t8, $t9
+   	bnez $t8, retorna_vitoria
+    #se não, continua
+	
+	#--------------	
+    #vertical_3:
+    #11, 35, 59 tem o mesmo símbolo.
+    #--------------	
+    lb $s0, 11($t0)
+    lb $s1, 35($t0)
+    lb $s2, 59($t0)
+
+    seq $t8, $s0, $s1    #11(t0) == 35(t0)
+    seq $t9, $s1, $s2    #35(t0) == 59(t0)
+
+    #confere se as duas flags são 1
+    and $t8, $t8, $t9
+   	bnez $t8, retorna_vitoria
+    #se não, continua
+	
+	#--------------	
+	#diagonal_2:
+    #11, 31, 51 tem o mesmo símbolo.
+    #--------------	
+    lb $s0, 11($t0)
+    lb $s1, 31($t0)
+    lb $s2, 51($t0)
+
+    seq $t8, $s0, $s1    #11(t0) == 31(t0)
+    seq $t9, $s1, $s2    #31(t0) == 51(t0)
+
+    #confere se as duas flags são 1
+    and $t8, $t8, $t9
+   	bnez $t8, retorna_vitoria
+    #se não, continua
+    #----------------------------------------------------------------------
+    #se chegou aqui e não pulou pra retorna vitória
+    #volta com o valor aleatório(v0=3) e continua
+    jr $ra
+    
+	retorna_vitoria:
+		move $v0, $a3	#carrega quem venceu no v0
+		jr $ra			#retorna o v0
+
 		
-		#retorna 1 se x ganhou
-		#0 se O ganhou
-		#qualquer coisa se não foi decidido ainda
+reseta_tabuleiro:
+	la $t0, tabuleiro
+	
+	#basicamente carrega o número no t1 equivalente a tabela ascii
+	#carrega ele de volta na string na posição respectiva
+	
+	li $t1, 49			#carrega 1
+	sb $t1, 3($t0)		#carrega o 1 na string pra voltar ao normal
+	
+	li $t1, 50
+	sb $t1, 7($t0)
+	
+	li $t1, 51
+	sb $t1, 11($t0)
+	
+	li $t1, 52
+	sb $t1, 27($t0)
+	
+	li $t1, 53
+	sb $t1, 31($t0)
+	
+	li $t1, 54
+	sb $t1, 35($t0)
+	
+	li $t1, 55
+	sb $t1, 51($t0)
+	
+	li $t1, 56
+	sb $t1, 55($t0)
+	
+	li $t1, 57
+	sb $t1, 59($t0)
+	
+	jr $ra
 	
 
 end:
+	li $v0, 10
+	syscall
