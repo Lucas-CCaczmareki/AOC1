@@ -180,8 +180,8 @@ partida:
 		#se for impar, seta pra 0(joga O)
 		
 		#aqui entra as condições
-		beq $s5, $s6, empate		#quando terminar pula pra empate que finaliza a partida
 		jal imprime_tab
+		beq $s5, $s6, empate		#quando terminar pula pra empate que finaliza a partida
 		
 		#tem que botar uma flag pra indicar se a jogada é o X ou ou o O
 		
